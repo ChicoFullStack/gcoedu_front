@@ -16,13 +16,8 @@ export default function SubdominioInvalido() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // If we have a subdomain in the URL, verify it. 
-    // If no subdomain, we show the selector immediately.
     const hostname = window.location.hostname;
     const parts = hostname.split(".");
-    
-    // Check if there is an actual subdomain (e.g. camacari.gcoedu.com)
-    // If the domain only has 2 parts (gcoedu.com) or is localhost, we ask for the tenant.
     const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
     
     let subdomainToCheck = "";
@@ -30,6 +25,8 @@ export default function SubdominioInvalido() {
       subdomainToCheck = parts[0];
     } else if (isLocalhost && parts.length >= 2 && parts[0] !== 'localhost') {
       subdomainToCheck = parts[0];
+    } else {
+      subdomainToCheck = localStorage.getItem("tenant_slug") || "";
     }
 
     if (!subdomainToCheck) {
@@ -44,9 +41,9 @@ export default function SubdominioInvalido() {
         );
         if (data?.exists) {
           setStatus("valid");
-          // Volta para a rota raiz para o fluxo normal (SubdomainCheck/Login/BaseRoute).
-          navigate("/", { replace: true });
+          window.location.href = "/";
         } else {
+          localStorage.removeItem("tenant_slug");
           setStatus("invalid");
         }
       } catch {
@@ -55,7 +52,7 @@ export default function SubdominioInvalido() {
     };
 
     check();
-  }, [navigate]);
+  }, []);
 
   const handleSelectTenant = async (e: React.FormEvent) => {
     e.preventDefault();
