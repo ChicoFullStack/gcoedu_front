@@ -10,11 +10,20 @@ export function getSubdomainFromHost(hostname?: string): string {
   const parts = host.split('.');
   
   let slug = '';
-  if (parts.length >= 2) {
-    const first = parts[0] ?? '';
-    if (first && !RESERVED_SUBDOMAINS.has(first)) {
-      slug = first;
+  const isIp = /^\\d+\\.\\d+\\.\\d+\\.\\d+$/.test(host);
+
+  if (host.includes('localhost') && parts.length >= 2 && parts[0] !== 'localhost') {
+    slug = parts[0];
+  } else if (!isIp) {
+    if (host.endsWith('.br') && parts.length >= 4) {
+      slug = parts[0];
+    } else if (!host.endsWith('.br') && parts.length >= 3) {
+      slug = parts[0];
     }
+  }
+
+  if (RESERVED_SUBDOMAINS.has(slug)) {
+    slug = '';
   }
 
   // Fallback para localStorage (útil para acessos pelo domínio raiz)
