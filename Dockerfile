@@ -24,7 +24,7 @@ COPY package*.json ./
 
 
 # Usa npm ci (mais rápido e estável em ambientes CI/CD)
-RUN npm ci
+RUN npm install
 #RUN --mount=type=cache,target=/root/.npm npm ci --prefer-offline --no-audit
 
 
