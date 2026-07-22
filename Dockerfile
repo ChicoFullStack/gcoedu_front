@@ -29,6 +29,8 @@ RUN npm install --no-audit --no-fund
 
 COPY . .
 
+ARG VITE_API_BASE_URL=/api
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 # Build do frontend com limite de memória alocada para o Node (ex: 1GB ou 1.5GB)
 ENV NODE_OPTIONS="--max-old-space-size=1536"
 RUN npm run build
