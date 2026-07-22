@@ -45,4 +45,4 @@ RUN apk add --no-cache gettext
 COPY --from=build /app/dist /usr/share/nginx/html
 
 COPY nginx.conf.template /etc/nginx/nginx.conf.template
-CMD ["/bin/sh", "-c", "export API_CONTAINER=${API_CONTAINER:-localhost} && envsubst '$API_CONTAINER' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"]
+CMD ["/bin/sh", "-c", "export API_CONTAINER=${API_CONTAINER:-localhost} API_PORT=${API_PORT:-8080} && envsubst '$API_CONTAINER $API_PORT' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"]
