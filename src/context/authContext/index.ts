@@ -234,6 +234,7 @@ export const useAuth = create<AuthContext>((set, get) => ({
             await api.post("/logout/")
             localStorage.removeItem('token')
             localStorage.removeItem('user')
+            localStorage.removeItem('tenant_slug') // Clear tenant selection
             setStoredReferenceCityId(null)
             
             // ✅ Limpar filtros das páginas de resultados ao fazer logout
