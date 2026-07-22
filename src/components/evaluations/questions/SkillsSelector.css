@@ -1,0 +1,150 @@
+/* SkillsSelector Custom Styles */
+
+/* Garantir que o dialog overlay seja completamente opaco */
+[data-radix-dialog-overlay] {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+/* Garantir que o content tenha fundo sólido e seja responsivo */
+.skills-selector-dialog[data-radix-dialog-content],
+.skills-selector-dialog {
+  background-color: hsl(var(--background)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  z-index: 9999 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+/* Mobile: ajustar tamanho em telas pequenas */
+@media (max-width: 640px) {
+  .skills-selector-dialog {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    border: none !important;
+  }
+}
+
+/* Headers sticky com fundo sólido e blur */
+.skills-category-header {
+  background-color: hsl(var(--background) / 0.95) !important;
+  backdrop-filter: blur(12px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+  border-bottom: 1px solid hsl(var(--border)) !important;
+}
+
+/* Melhorar contraste das habilidades selecionadas */
+.skill-item-selected {
+  background-color: hsl(217 91% 60% / 0.1) !important;
+  border-color: hsl(217 91% 60%) !important;
+  box-shadow: 0 0 0 1px hsl(217 91% 60%), 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .skill-item-selected {
+    background-color: hsl(217 91% 60% / 0.2) !important;
+    border-color: hsl(217 91% 60% / 0.8) !important;
+  }
+}
+
+/* Scroll area com performance otimizada */
+.skills-scroll-area {
+  background-color: hsl(var(--background)) !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent !important;
+}
+
+/* Customizar scrollbar no webkit */
+.skills-scroll-area::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+.skills-scroll-area::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.skills-scroll-area::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.3) !important;
+  border-radius: 3px !important;
+}
+
+.skills-scroll-area::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.5) !important;
+}
+
+/* Sidebar com melhor comportamento */
+.skills-sidebar {
+  background-color: hsl(var(--muted) / 0.5) !important;
+  border-right: 1px solid hsl(var(--border)) !important;
+  overflow: hidden !important;
+}
+
+/* Footer fixo e responsivo */
+.skills-footer {
+  background-color: hsl(var(--background) / 0.98) !important;
+  border-top: 1px solid hsl(var(--border)) !important;
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+/* Melhorar performance de animações */
+.skills-selector-dialog * {
+  will-change: auto !important;
+}
+
+/* Garantir que elementos não quebrem o layout em mobile */
+@media (max-width: 640px) {
+  .skills-sidebar {
+    display: none !important;
+  }
+  
+  .skills-category-header {
+    margin-left: -12px !important;
+    margin-right: -12px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+}
+
+/* Melhorar hover states em touch devices */
+@media (hover: none) {
+  .skill-item:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+}
+
+/* Transições suaves para mudanças de layout */
+.skills-selector-dialog,
+.skills-sidebar,
+.skills-scroll-area {
+  transition: all 0.2s ease-in-out !important;
+}
+
+/* Garantir que o grid seja responsivo */
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .grid.lg\:grid-cols-1 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Melhorar legibilidade em telas pequenas */
+@media (max-width: 640px) {
+  .font-mono {
+    word-break: break-all !important;
+    hyphens: auto !important;
+  }
+} 

@@ -1,0 +1,18 @@
+services:
+  app:
+    image: gcoedu/gcoedu-frontend:${VERSION}
+    container_name: gcoedu_front_dev
+    environment:
+      - API_CONTAINER=${API_CONTAINER}
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL}
+    ports:
+      - "8001:80/tcp"
+    networks:
+      - gcoedu_network_dev
+    restart: unless-stopped
+
+
+networks:
+  gcoedu_network_dev:
+    name: gcoedu_network_dev
+    external: true

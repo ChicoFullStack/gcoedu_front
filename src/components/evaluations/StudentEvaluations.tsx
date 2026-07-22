@@ -1,0 +1,1174 @@
+import React, { useState, useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Play,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  BookOpen,
+  Calendar,
+  Users,
+  FileText,
+  Timer,
+  RefreshCw,
+  Trophy,
+  Target,
+  Zap,
+  Info,
+  X,
+  AlertTriangle
+} from "lucide-react";
+import { useAuth } from "@/context/authContext";
+import { useNavigate, Link } from "react-router-dom";
+import { api } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import { EvaluationApiService } from "@/services/evaluation/evaluationApi";
+
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "./results/constants";
+
+interface DetailedAnswer {
+  question_id: string;
+  question_number: number;
+  question_text: string;
+  question_type: string;
+  question_value: number;
+  student_answer: string | null;
+  answered_at: string | null;
+  is_correct: boolean | null;
+  score: number | null;
+  feedback: string | null;
+  corrected_by: string | null;
+  corrected_at: string | null;
+  manual_score?: number;
+  status?: string;
+}
+
+interface DetailedResults {
+  test_id: string;
+  student_id: string;
+  total_questions: number;
+  answered_questions: number;
+  correct_answers: number;
+  score_percentage: number;
+  total_score: number;
+  max_possible_score: number;
+  answers: DetailedAnswer[] | null;
+}
+
+// ✅ NOVO: Interfaces atualizadas para os novos campos
+interface Availability {
+  is_available: boolean;
+  status: "available" | "not_available" | "not_yet_available" | "expired" | "completed" | "not_started";
+  timezone?: string;
+  time_zone?: string;
+}
+
+interface StudentStatus {
+  has_completed: boolean;
+  status: "nao_iniciada" | "em_andamento" | "finalizada" | "expirada" | "corrigida" | "revisada";
+  can_start: boolean;
+  score?: number;
+  grade?: number;
+}
+
+interface StudentEvaluation {
+  id: string;
+  title: string;
+  description: string;
+  subject: { id: string; name: string }; // Subject principal (compatibilidade)
+  subjects: { id: string; name: string }[]; // Lista completa de subjects
+  subjects_info: { id: string; name: string }[]; // Lista de disciplinas com id e name
+  grade: { id: string; name: string };
+  course: { id: string; name: string };
+  startDateTime: string;
+  endDateTime?: string;
+  duration: number; // em minutos (duration ou duration_minutes da API)
+  duration_minutes?: number; // alternativo da API
+  totalQuestions: number;
+  maxScore: number;
+  type: string;
+  model: string;
+  // ✅ NOVO: Campos atualizados
+  availability: Availability;
+  student_status: StudentStatus;
+  detailedResults?: DetailedResults; // Resultados detalhados com respostas
+  timeZone?: string;
+  applicationTimeZone?: string;
+}
+
+interface EvaluationTaking {
+  evaluationId: string;
+  currentQuestion: number;
+  answers: { [questionId: string]: string | string[] };
+  timeRemaining: number;
+  startedAt: string;
+}
+
+interface StudentClass {
+  id: string;
+  name: string;
+  school_id: string;
+  grade_id: string;
+  school: {
+    id: string;
+    name: string;
+    domain: string;
+    address: string;
+    city_id: string;
+  };
+  grade: {
+    id: string;
+    name: string;
+  };
+  student: {
+    id: string;
+    name: string;
+    registration: string;
+    birth_date: string;
+    user_id: string;
+  };
+  applied_tests: {
+    total: number;
+    test_ids: string[];
+  };
+}
+
+interface MyClassTestItem {
+  test_id: string;
+  title: string;
+  subjects_info?: { id: string; name: string }[];
+  subject?: { id: string; name: string };
+  application_info?: {
+    application?: string;
+    expiration?: string;
+    timezone?: string;
+    time_zone?: string;
+  };
+  duration?: number;
+  total_questions?: number;
+  max_score?: number;
+  type?: string;
+  model?: string;
+  grade?: { id: string; name: string };
+  description?: string;
+  availability: Availability;
+  student_status: StudentStatus;
+}
+
+export default function StudentEvaluations() {
+  const [evaluations, setEvaluations] = useState<StudentEvaluation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedEvaluation, setSelectedEvaluation] = useState<StudentEvaluation | null>(null);
+  const [showInstructions, setShowInstructions] = useState(false);
+
+  const [currentTaking, setCurrentTaking] = useState<EvaluationTaking | null>(null);
+  const [confirmStart, setConfirmStart] = useState(false);
+  const [canStartReason, setCanStartReason] = useState<string>("");
+
+  // ✅ TEMPORÁRIO: Estado para sessões ativas
+  const [activeSessions, setActiveSessions] = useState<Array<{ session_id: string; test_id: string; test_title?: string }>>([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate(); // único uso de useNavigate neste componente
+
+  const DEFAULT_TIME_ZONE = (() => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Sao_Paulo";
+  } catch (error) {
+    return "America/Sao_Paulo";
+  }
+})();
+
+function resolveTimeZone(candidate?: string): string {
+  if (!candidate) {
+    return DEFAULT_TIME_ZONE;
+  }
+
+  try {
+    // Validar timezone usando Intl
+    new Intl.DateTimeFormat("pt-BR", { timeZone: candidate });
+    return candidate;
+  } catch (error) {
+    return DEFAULT_TIME_ZONE;
+  }
+}
+
+function getEvaluationTimeZone(evaluation?: StudentEvaluation): string {
+  if (!evaluation) {
+    return DEFAULT_TIME_ZONE;
+  }
+
+  const candidate =
+    evaluation.applicationTimeZone ||
+    evaluation.timeZone ||
+    evaluation.availability?.time_zone ||
+    evaluation.availability?.timezone;
+
+  return resolveTimeZone(candidate);
+}
+
+function formatDateTimeForDisplay(value?: string, timeZone?: string): string | null {
+  if (!value) {
+    return null;
+  }
+
+  // ✅ CORREÇÃO: Se a data não tem timezone (não termina com Z nem tem +/-HH:MM),
+  // assumir que está em UTC e adicionar 'Z' para forçar interpretação correta
+  let dateString = value;
+  const hasTimezone = value.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(value);
+  
+  if (!hasTimezone) {
+    // Backend retorna data em UTC mas sem o 'Z'
+    // Adicionar 'Z' para forçar interpretação como UTC
+    dateString = value.includes('.') 
+      ? value.split('.')[0] + 'Z' // Remover microsegundos e adicionar Z
+      : value + 'Z';
+  }
+
+  const date = new Date(dateString);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const safeTimeZone = resolveTimeZone(timeZone);
+
+  const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: safeTimeZone,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  });
+
+  const timeFormatter = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: safeTimeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  });
+
+  return `${dateFormatter.format(date)} às ${timeFormatter.format(date)}`;
+}
+
+  // Função de retry com backoff exponencial
+  const retryWithBackoff = async <T,>(
+    fn: () => Promise<T>,
+    maxAttempts: number = 3,
+    baseDelay: number = 1000
+  ): Promise<T> => {
+    let lastError: unknown;
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await fn();
+      } catch (error: unknown) {
+        lastError = error;
+        
+        const apiError = error as { response?: { status?: number } };
+        
+        // Verificar se é erro de rede que deve ter retry
+        const isNetworkError = 
+          !apiError.response || 
+          apiError.response.status === 500 || 
+          apiError.response.status === 502 || 
+          apiError.response.status === 503 || 
+          apiError.response.status === 504;
+        
+        // Se não é erro de rede ou já foi a última tentativa, lançar erro
+        if (!isNetworkError || attempt >= maxAttempts) {
+          throw error;
+        }
+        
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    throw lastError;
+  };
+
+  const fetchStudentEvaluations = useCallback(async () => {
+    try {
+      setIsLoading(true);
+
+      await retryWithBackoff(async () => {
+        const response = await api.get('/test/my-class/tests');
+        const testsData = response.data?.tests ?? [];
+
+        if (!Array.isArray(testsData)) {
+          setEvaluations([]);
+          return [];
+        }
+
+        const filteredTests = testsData.filter((testData: MyClassTestItem) => {
+          if (!testData.availability || !testData.student_status) return false;
+          const type = (testData.type || '').toUpperCase();
+          if (!testData.type ||
+              type === 'OLIMPIADAS' ||
+              type === 'OLIMPIADA' ||
+              type === 'COMPETICAO' ||
+              type === 'COMPETIÇÃO') {
+            return false;
+          }
+          return true;
+        });
+
+        const evaluationsWithStatus = filteredTests.map((testData: MyClassTestItem) => {
+        const applicationTimeZone =
+          testData.application_info?.timezone ||
+          testData.application_info?.time_zone ||
+          testData.availability?.time_zone ||
+          testData.availability?.timezone;
+
+        const resolvedTimeZone = resolveTimeZone(applicationTimeZone);
+
+        // Mapear os dados da API para o formato esperado pelo componente
+        const evaluation: StudentEvaluation = {
+          id: testData.test_id,
+          title: testData.title || testData.description || 'Avaliação sem título',
+          description: testData.description || '',
+          subject: testData.subject || { id: 'default', name: 'Disciplina' },
+          subjects: testData.subjects_info || [testData.subject || { id: 'default', name: 'Disciplina' }],
+          subjects_info: testData.subjects_info || [testData.subject || { id: 'default', name: 'Disciplina' }],
+          grade: testData.grade || { id: 'default', name: 'Série' },
+          course: { id: 'course', name: 'Curso' },
+          startDateTime: testData.application_info?.application || new Date().toISOString(),
+          endDateTime: testData.application_info?.expiration,
+          duration: testData.duration ?? testData.duration_minutes ?? 60,
+          duration_minutes: testData.duration_minutes,
+          totalQuestions: testData.total_questions || 0,
+          maxScore: testData.max_score || 0,
+          type: testData.type || 'AVALIACAO',
+          model: testData.model || 'SAEB',
+          // ✅ NOVO: Usar os novos campos
+          availability: testData.availability,
+          student_status: testData.student_status,
+          timeZone: resolvedTimeZone,
+          applicationTimeZone
+        };
+
+        return evaluation;
+      });
+
+        setEvaluations(evaluationsWithStatus);
+        return evaluationsWithStatus;
+      }, 2, 500);
+
+    } catch (error: unknown) {
+      const apiError = error as { message?: string; response?: { data?: unknown; status?: number }; stack?: string };
+
+      // Verificar se é erro de rede após todas as tentativas
+      const isNetworkError = 
+        !apiError.response || 
+        apiError.response.status === 500 || 
+        apiError.response.status === 502 || 
+        apiError.response.status === 503 || 
+        apiError.response.status === 504;
+      
+      if (isNetworkError) {
+        toast({
+          title: "Erro",
+          description: ERROR_MESSAGES.RETRY_FAILED,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro ao carregar avaliações",
+          description: ERROR_MESSAGES.EVALUATION_LOAD_FAILED,
+          variant: "destructive",
+        });
+      }
+
+      setEvaluations([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchStudentEvaluations();
+    // ✅ TEMPORÁRIO: Carregar sessões ativas
+    loadActiveSessions();
+  }, [fetchStudentEvaluations]);
+
+  // ✅ TEMPORÁRIO: Função para carregar sessões ativas
+  const loadActiveSessions = useCallback(async () => {
+    setLoadingSessions(true);
+    try {
+      // Buscar todas as sessões do aluno usando a rota oficial do backend
+      const response = await api.get('/student-answers/student/sessions');
+      const sessions = response.data?.sessions || [];
+      
+      // Filtrar apenas sessões em andamento
+      // A rota retorna status: 'em_andamento', 'finalizada', 'expirada', etc.
+      const active = sessions.filter((s: any) => s.status === 'em_andamento');
+      
+      setActiveSessions(active);
+    } catch {
+      // Silenciar erro ao carregar sessões
+    } finally {
+      setLoadingSessions(false);
+    }
+  }, []);
+
+  // ✅ TEMPORÁRIO: Função para encerrar sessão
+  const handleEndSession = useCallback(async (sessionId: string) => {
+    try {
+      await EvaluationApiService.endSession(sessionId, 'manual');
+      toast({
+        title: 'Sessão encerrada',
+        description: 'A sessão foi encerrada com sucesso. Você pode iniciar uma nova avaliação ou olimpíada.',
+        variant: 'default',
+      });
+      // Recarregar sessões ativas
+      await loadActiveSessions();
+      // Recarregar avaliações para atualizar status
+      await fetchStudentEvaluations();
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      toast({
+        title: 'Erro',
+        description: err?.response?.data?.message || 'Erro ao encerrar sessão',
+        variant: 'destructive',
+      });
+    }
+  }, [toast, loadActiveSessions, fetchStudentEvaluations]);
+
+  // Verificar avaliação em progresso separadamente, apenas quando evaluations mudar
+  useEffect(() => {
+    const inProgress = localStorage.getItem("evaluation_in_progress");
+    if (inProgress && evaluations.length > 0) {
+      try {
+        const data = JSON.parse(inProgress);
+        if (data && data.evaluationId && typeof data.evaluationId === 'string') {
+          const evaluation = evaluations.find(e => e.id === data.evaluationId);
+          if (evaluation && evaluation.student_status.has_completed) {
+            localStorage.removeItem("evaluation_in_progress");
+            localStorage.removeItem("current_evaluation_data");
+            setCurrentTaking(null);
+          } else {
+            setCurrentTaking(data);
+          }
+        } else {
+          localStorage.removeItem("evaluation_in_progress");
+        }
+      } catch {
+        localStorage.removeItem("evaluation_in_progress");
+      }
+    } else if (inProgress && evaluations.length === 0) {
+      try {
+        const data = JSON.parse(inProgress);
+        if (data && data.evaluationId) {
+          setCurrentTaking(data);
+        }
+      } catch {
+        // Ignorar parse inválido
+      }
+    }
+  }, [evaluations]);
+
+  const handleStartEvaluation = async (evaluation: StudentEvaluation) => {
+    setSelectedEvaluation(evaluation);
+
+    // Verificar se pode iniciar usando o endpoint can-start
+    try {
+      // ✅ CORRIGIDO: Usar o endpoint correto para verificar se pode iniciar
+      const response = await api.get(`/student-answers/student/${evaluation.id}/can-start`);
+      const canStartData = response.data;
+
+      if (canStartData.can_start) {
+        setShowInstructions(true);
+      } else {
+        setCanStartReason(canStartData.reason || "Não foi possível iniciar a avaliação");
+        toast({
+          title: "Não é possível iniciar",
+          description: canStartData.reason || "Não foi possível iniciar a avaliação",
+          variant: "destructive",
+        });
+      }
+    } catch (error: unknown) {
+      const apiError = error as { message?: string; response?: { data?: { error?: string; message?: string }; status?: number }; config?: { url?: string } };
+
+      let errorMessage = "Erro ao verificar disponibilidade da avaliação";
+
+      if (apiError.response?.data?.error) {
+        errorMessage = apiError.response.data.error;
+      } else if (apiError.response?.data?.message) {
+        errorMessage = apiError.response.data.message;
+      }
+
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleConfirmStart = async () => {
+    if (!selectedEvaluation) return;
+
+    try {
+      const testId = selectedEvaluation.id;
+      const sessionData = await EvaluationApiService.startSession(testId, selectedEvaluation.duration);
+      const evaluationData = await EvaluationApiService.getTestData(testId);
+
+      sessionStorage.setItem("current_evaluation", JSON.stringify(evaluationData));
+      sessionStorage.setItem("evaluation_session", JSON.stringify(sessionData));
+
+      const takingData: EvaluationTaking = {
+        evaluationId: testId,
+        currentQuestion: 0,
+        answers: {},
+        timeRemaining: selectedEvaluation.duration * 60, // converter para segundos
+        startedAt: new Date().toISOString(),
+      };
+
+      // Salvar no localStorage para persistência
+      localStorage.setItem("evaluation_in_progress", JSON.stringify(takingData));
+      setCurrentTaking(takingData);
+
+      setShowInstructions(false);
+      setConfirmStart(false);
+
+      toast({
+        title: "🎉 Avaliação iniciada!",
+        description: `Você tem ${selectedEvaluation.duration} minutos para completar`,
+      });
+
+      // Redirecionar para tela de avaliação
+      window.location.href = `/app/avaliacao/${testId}/fazer`;
+
+    } catch (error: unknown) {
+      const apiError = error as { message?: string; response?: { data?: { error?: string; message?: string }; status?: number }; config?: { url?: string; method?: string }; stack?: string };
+
+      let errorMessage = "Não foi possível iniciar a avaliação";
+
+      // ✅ MELHORADO: Tratamento específico para diferentes tipos de erro
+      if (apiError.response?.status === 403) {
+        errorMessage = "Você não tem permissão para acessar esta avaliação";
+      } else if (apiError.response?.status === 404) {
+        errorMessage = "Avaliação não encontrada";
+      } else if (apiError.response?.status === 400) {
+        errorMessage = apiError.response.data?.error || "Dados inválidos para iniciar a avaliação";
+      } else if (apiError.response?.status === 422) {
+        errorMessage = apiError.response.data?.error || "Avaliação expirada ou indisponível";
+      } else if (apiError.response?.data?.error) {
+        errorMessage = apiError.response.data.error;
+      } else if (apiError.response?.data?.message) {
+        errorMessage = apiError.response.data.message;
+      } else if (apiError.message) {
+        errorMessage = apiError.message;
+      }
+
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleContinueEvaluation = (evaluation: StudentEvaluation) => {
+    navigate(`/aluno/avaliacao/${evaluation.id}/fazer`);
+  };
+
+  // ✅ NOVO: Função para obter badge baseado no student_status
+  const getStatusBadge = (evaluation: StudentEvaluation) => {
+    const { student_status, availability } = evaluation;
+
+    // ✅ CORRIGIDO: Verificar se está concluída primeiro
+    if (student_status.has_completed) {
+      return (
+        <Badge variant="secondary" className="flex items-center gap-1">
+          <CheckCircle className="h-3 w-3" />
+          Concluída
+        </Badge>
+      );
+    }
+
+    // ✅ CORRIGIDO: Verificar se está expirada (tanto no student_status quanto no availability)
+    if (student_status.status === 'expirada' || availability.status === 'expired') {
+      return (
+        <Badge variant="destructive" className="flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" />
+          Expirada
+        </Badge>
+      );
+    }
+
+    // ✅ NOVO: Verificar se está agendada (not_started)
+    if (availability.status === 'not_started') {
+      return (
+        <Badge variant="outline" className="flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-300">
+          <Calendar className="h-3 w-3" />
+          Agendada
+        </Badge>
+      );
+    }
+
+    // ✅ CORRIGIDO: Verificar outros status do student_status
+    switch (student_status.status) {
+      case 'em_andamento':
+        return (
+          <Badge variant="secondary" className="flex items-center gap-1">
+            <Timer className="h-3 w-3" />
+            Em andamento
+          </Badge>
+        );
+      case 'finalizada':
+        return (
+          <Badge variant="secondary" className="flex items-center gap-1">
+            <CheckCircle className="h-3 w-3" />
+            Finalizada
+          </Badge>
+        );
+      case 'corrigida':
+        return (
+          <Badge variant="default" className="flex items-center gap-1">
+            <CheckCircle className="h-3 w-3" />
+            Corrigida
+          </Badge>
+        );
+      case 'revisada':
+        return (
+          <Badge variant="default" className="flex items-center gap-1">
+            <CheckCircle className="h-3 w-3" />
+            Revisada
+          </Badge>
+        );
+      default:
+        // ✅ CORRIGIDO: Verificar se está disponível baseado no availability
+        if (availability.is_available && student_status.can_start) {
+          return (
+            <Badge variant="outline" className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              Disponível
+            </Badge>
+          );
+        } else {
+          return (
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              Indisponível
+            </Badge>
+          );
+        }
+    }
+  };
+
+  const formatTimeRemaining = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${secs}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
+  };
+
+  const getPerformanceColor = (percentage: number) => {
+    if (percentage >= 80) return "text-green-600";
+    if (percentage >= 60) return "text-blue-600";
+    if (percentage >= 40) return "text-yellow-600";
+    return "text-red-600";
+  };
+
+  // ✅ NOVO: Função para formatar a exibição das disciplinas
+  const formatSubjects = (evaluation: StudentEvaluation) => {
+    if (evaluation.subjects_info && evaluation.subjects_info.length > 1) {
+      // Se há múltiplas disciplinas, mostrar a primeira + "e mais X"
+      const firstSubject = evaluation.subjects_info[0].name;
+      const remainingCount = evaluation.subjects_info.length - 1;
+      return `${firstSubject} e mais ${remainingCount} disciplina${remainingCount > 1 ? 's' : ''}`;
+    } else if (evaluation.subjects_info && evaluation.subjects_info.length === 1) {
+      // Se há apenas uma disciplina
+      return evaluation.subjects_info[0].name;
+    } else {
+      // Fallback para o subject principal
+      return evaluation.subject.name;
+    }
+  };
+
+  // ✅ NOVO: Função para obter todas as disciplinas como string
+  const getAllSubjects = (evaluation: StudentEvaluation) => {
+    if (evaluation.subjects_info && evaluation.subjects_info.length > 0) {
+      return evaluation.subjects_info.map(subject => subject.name).join(', ');
+    } else {
+      return evaluation.subject.name;
+    }
+  };
+
+  // ✅ NOVO: Função para obter a quantidade de disciplinas
+  const getSubjectsCount = (evaluation: StudentEvaluation) => {
+    return evaluation.subjects_info?.length || 1;
+  };
+
+  // Na página de Avaliações: mostrar apenas expiradas e as aplicadas que o aluno pode iniciar.
+  // Avaliações com resultado (concluídas) ficam apenas em Resultados.
+  const evaluationsForList = React.useMemo(() => {
+    return evaluations.filter((e) => {
+      const expirada = e.availability?.status === "expired" || e.student_status?.status === "expirada";
+      const podeIniciar = e.student_status?.can_start && !e.student_status?.has_completed;
+      return expirada || podeIniciar;
+    });
+  }, [evaluations]);
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-6 space-y-6 min-h-screen">
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-64 rounded-lg" />
+          <Skeleton className="h-4 w-96 rounded" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="h-64 rounded-2xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-6 space-y-6 min-h-screen">
+      {/* Header — gamificado (padrão Resultados) */}
+      <div className="space-y-2 animate-fade-in-up">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1.5">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex flex-wrap items-center gap-2 sm:gap-3" id="avaliacoes-page-title">
+              <span className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-pink-500 shadow-lg shadow-fuchsia-500/30 transition-transform duration-300 hover:scale-110 shrink-0">
+                <BookOpen className="w-5 h-5 text-white drop-shadow" />
+              </span>
+              <span className="bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-500 dark:from-violet-400 dark:via-fuchsia-400 dark:to-pink-400 bg-clip-text text-transparent">Minhas Avaliações</span>
+            </h1>
+            <p className="text-muted-foreground text-sm sm:text-base font-medium">
+              Acompanhe suas avaliações agendadas e resultados
+            </p>
+            <Link
+              to="/aluno/resultados"
+              className="text-sm text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 hover:underline inline-flex items-center gap-1 mt-1 font-medium transition-colors"
+              aria-label="Ver todos os meus resultados em página dedicada"
+            >
+              <Trophy className="h-4 w-4" />
+              Ver todos os meus resultados
+            </Link>
+          </div>
+          <div className="flex justify-center w-full sm:w-auto sm:justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchStudentEvaluations}
+              disabled={isLoading}
+              className="rounded-full border-violet-300 dark:border-violet-500/50 hover:bg-violet-500/15 hover:border-violet-400 transition-all"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Atualizar
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Estatísticas Rápidas (apenas avaliações expiradas ou que o aluno pode iniciar) */}
+      <div className="grid gap-4 md:grid-cols-5">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Disponíveis</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {evaluationsForList.filter(e => e.availability.is_available && !e.student_status.has_completed && e.student_status.can_start && e.availability.status !== 'not_started').length}
+                </p>
+              </div>
+              <Play className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Agendadas</p>
+                <p className="text-2xl font-bold text-indigo-600">
+                  {evaluationsForList.filter(e => e.availability.status === 'not_started').length}
+                </p>
+              </div>
+              <Calendar className="h-8 w-8 text-indigo-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Em andamento</p>
+                <p className="text-2xl font-bold text-orange-600">
+                  {evaluationsForList.filter(e => e.student_status.status === 'em_andamento').length}
+                </p>
+              </div>
+              <Timer className="h-8 w-8 text-orange-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Expiradas</p>
+                <p className="text-2xl font-bold text-amber-600">
+                  {evaluationsForList.filter(e => e.availability?.status === 'expired' || e.student_status?.status === 'expirada').length}
+                </p>
+              </div>
+              <AlertCircle className="h-8 w-8 text-amber-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-1">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Com resultado</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {evaluations.filter(e => e.student_status.has_completed).length}
+                </p>
+                <Link to="/aluno/resultados" className="text-xs text-green-600 hover:underline mt-0.5 inline-block">Ver em Resultados</Link>
+              </div>
+              <Trophy className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Avaliação em Progresso */}
+      {currentTaking && currentTaking.evaluationId &&
+        evaluations.find(e => e.id === currentTaking.evaluationId && e.student_status.status === 'em_andamento') && (
+          <Alert className="border-blue-200 bg-blue-50">
+            <Timer className="h-4 w-4" />
+            <AlertDescription className="flex items-center justify-between">
+              <span>
+                Você tem uma avaliação em progresso.
+                <strong className="ml-1">
+                  {evaluations.find(e => e.id === currentTaking.evaluationId)?.title || 'Avaliação'}
+                </strong>
+              </span>
+              <Button
+                size="sm"
+                onClick={() => {
+                  const evaluation = evaluations.find(e => e.id === currentTaking.evaluationId);
+                  if (evaluation) {
+                    handleContinueEvaluation(evaluation);
+                  } else {
+                    toast({
+                      title: "Erro",
+                      description: ERROR_MESSAGES.EVALUATION_NOT_FOUND,
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                Continuar
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+      {/* Lista de Avaliações (apenas expiradas e as que o aluno pode iniciar; com resultado só em Resultados) */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {evaluationsForList.map((evaluation) => (
+          <Card key={evaluation.id} className="hover:shadow-md transition-shadow">
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1 flex-1">
+                  <CardTitle className="text-base line-clamp-2">{evaluation.title}</CardTitle>
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(evaluation)}
+                    <Badge variant="outline" className="text-xs">
+                      {evaluation.type}
+                    </Badge>
+                    {evaluation.subjects_info && evaluation.subjects_info.length > 1 && (
+                      <Badge
+                        variant="secondary"
+                        className="text-xs bg-purple-100 text-purple-800 border-purple-300"
+                        title={getAllSubjects(evaluation)}
+                      >
+                        {getSubjectsCount(evaluation)} Disciplina{getSubjectsCount(evaluation) > 1 ? 's' : ''}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              {/* Informações básicas */}
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="h-4 w-4 text-muted-foreground" />
+                  <span className="line-clamp-1" title={getAllSubjects(evaluation)}>
+                    {formatSubjects(evaluation)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span>{evaluation.duration || 60} minutos</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span>{evaluation.totalQuestions} questões</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span>
+                    {(() => {
+                      const timeZone = getEvaluationTimeZone(evaluation);
+                      const start = formatDateTimeForDisplay(evaluation.startDateTime, timeZone) || "Data não definida";
+                      const end = formatDateTimeForDisplay(evaluation.endDateTime, timeZone) || "Sem prazo definido";
+                      return `Disponível em: ${start} até ${end}`;
+                    })()}
+                  </span>
+                </div>
+              </div>
+
+
+              {/* Ações */}
+              <div className="flex gap-2">
+                {/* ✅ NOVO: Botão "Agendada" se status === "not_started" */}
+                {evaluation.availability.status === 'not_started' && (
+                  <Button
+                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    disabled
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Agendada
+                  </Button>
+                )}
+
+                {/* ✅ CORRIGIDO: Botão "Iniciar" só mostrar se disponível, pode iniciar e NÃO está em andamento */}
+                {evaluation.availability.is_available &&
+                  !evaluation.student_status.has_completed &&
+                  evaluation.student_status.can_start &&
+                  evaluation.student_status.status !== "expirada" &&
+                  evaluation.student_status.status !== "em_andamento" &&
+                  evaluation.availability.status !== 'not_started' && (
+                    <Button
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      onClick={() => handleStartEvaluation(evaluation)}
+                    >
+                      <Play className="h-4 w-4 mr-2" />
+                      Iniciar Avaliação
+                    </Button>
+                  )}
+
+                {/* ✅ CORRIGIDO: Botão "Continuar" se status === "em_andamento" */}
+                {evaluation.student_status.status === "em_andamento" && (
+                  <Button
+                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    onClick={() => handleContinueEvaluation(evaluation)}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Continuar
+                  </Button>
+                )}
+
+                {/* ✅ Botão "Ver Resultado" aparece apenas quando concluída E entregue (tem score ou status finalizado) */}
+                {evaluation.student_status.has_completed && 
+                 (evaluation.student_status.score !== undefined || 
+                  evaluation.student_status.status === "finalizada" || 
+                  evaluation.student_status.status === "corrigida" || 
+                  evaluation.student_status.status === "revisada") && (
+                  <Button
+                    className="flex-1 bg-purple-600 hover:bg-purple-700"
+                    onClick={() => navigate(`/aluno/avaliacao/${evaluation.id}/resultado`)}
+                  >
+                    <Trophy className="h-4 w-4 mr-2" />
+                    Ver Resultado
+                  </Button>
+                )}
+
+                {/* ✅ CORRIGIDO: Botão "Expirada" se status === "expirada" ou availability.status === "expired" */}
+                {(evaluation.student_status.status === "expirada" ||
+                  evaluation.availability.status === "expired") && (
+                    <Button className="flex-1 bg-red-600 hover:bg-red-700" disabled>
+                      <AlertCircle className="h-4 w-4 mr-2" />
+                      Expirada
+                    </Button>
+                  )}
+
+                {/* ✅ CORRIGIDO: Botão "Indisponível" se não pode iniciar, não está expirada e não está em andamento */}
+                {evaluation.availability.is_available &&
+                  !evaluation.student_status.has_completed &&
+                  !evaluation.student_status.can_start &&
+                  evaluation.student_status.status !== "expirada" &&
+                  evaluation.student_status.status !== "em_andamento" &&
+                  evaluation.availability.status !== "expired" &&
+                  evaluation.availability.status !== 'not_started' && (
+                    <Button className="flex-1 bg-muted text-muted-foreground hover:bg-muted/80" disabled>
+                      <AlertCircle className="h-4 w-4 mr-2" />
+                      Indisponível
+                    </Button>
+                  )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Dialog de Instruções */}
+      <Dialog open={showInstructions} onOpenChange={setShowInstructions}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-foreground">
+              <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              Instruções da Avaliação
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Leia atentamente antes de iniciar a avaliação
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Informações da Avaliação */}
+            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
+              <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-3 flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                {selectedEvaluation?.title}
+              </h4>
+              <div className="grid grid-cols-2 gap-3 text-sm text-blue-800 dark:text-blue-300">
+                <div>
+                  <span className="font-medium">Disciplina{selectedEvaluation?.subjects_info && selectedEvaluation.subjects_info.length > 1 ? 's' : ''}:</span>
+                  <p className="dark:text-blue-200">{selectedEvaluation ? getAllSubjects(selectedEvaluation) : ''}</p>
+                </div>
+                <div>
+                  <span className="font-medium">Duração:</span>
+                  <p className="dark:text-blue-200">
+                  {(selectedEvaluation?.duration ?? selectedEvaluation?.duration_minutes) != null
+                    ? `${selectedEvaluation?.duration ?? selectedEvaluation?.duration_minutes} minutos`
+                    : 'Não informado'}
+                </p>
+                </div>
+                <div>
+                  <span className="font-medium">Questões:</span>
+                  <p className="dark:text-blue-200">{selectedEvaluation?.totalQuestions}</p>
+                </div>
+                <div>
+                  <span className="font-medium">Tipo:</span>
+                  <p className="dark:text-blue-200">{selectedEvaluation?.type}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Como Funciona - SIMPLIFICADO */}
+            <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-4 rounded-lg">
+              <h5 className="font-semibold text-green-900 dark:text-green-300 mb-2 flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                Como funciona
+              </h5>
+              <div className="space-y-1 text-sm text-green-800 dark:text-green-300">
+                <p>✔️ Leia as questões com atenção</p>
+                <p>✔️ Suas respostas são salvas automaticamente</p>
+                <p>✔️ Você pode revisar antes de finalizar</p>
+              </div>
+            </div>
+
+            {/* Importante - SIMPLIFICADO */}
+            <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 p-4 rounded-lg">
+              <h5 className="font-semibold text-yellow-900 dark:text-yellow-300 mb-2 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                Importante
+              </h5>
+              <div className="space-y-1 text-sm text-yellow-800 dark:text-yellow-300">
+                <p>⚠️ Mantenha conexão estável com a internet</p>
+                <p>⚠️ Não feche a aba/janela durante a avaliação</p>
+              </div>
+            </div>
+
+            {/* Tempo disponível: janela de aplicação (De … até …) — não é a duração da prova */}
+            {selectedEvaluation && (selectedEvaluation.startDateTime || selectedEvaluation.endDateTime) && (
+              <div className="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 p-4 rounded-lg">
+                <h5 className="font-semibold text-purple-900 dark:text-purple-300 mb-2 flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  Tempo disponível
+                </h5>
+                <p className="text-sm text-purple-800 dark:text-purple-300">
+                  {(() => {
+                    const timeZone = getEvaluationTimeZone(selectedEvaluation || undefined);
+                    const start = formatDateTimeForDisplay(selectedEvaluation?.startDateTime, timeZone) || "data não definida";
+                    const end = formatDateTimeForDisplay(selectedEvaluation?.endDateTime, timeZone) || "sem prazo definido";
+                    return `De ${start} até ${end}`;
+                  })()}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button variant="outline" onClick={() => setShowInstructions(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => setConfirmStart(true)}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Play className="h-4 w-4 mr-2" />
+              Iniciar Avaliação
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+
+
+      {/* AlertDialog de Confirmação */}
+      <AlertDialog open={confirmStart} onOpenChange={setConfirmStart}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar início da avaliação</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja iniciar a avaliação? Uma vez iniciada,
+              o cronômetro começará e não poderá ser pausado.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmStart}>
+              Sim, iniciar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}

@@ -1,0 +1,231 @@
+import { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '@/context/authContext';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, RefreshCw, Plus, Eye, CheckCheck } from 'lucide-react';
+import { AvisosList } from '@/components/avisos/AvisosList';
+import { CreateAvisoForm } from '@/components/avisos/CreateAvisoForm';
+import { deleteAviso, getFilteredAvisos, updateAviso } from '@/services/avisosApi';
+import { canCreateAvisos } from '@/utils/avisosPermissions';
+import { useToast } from '@/hooks/use-toast';
+import { useUnreadAvisos, AVISOS_UPDATE_EVENT } from '@/hooks/useUnreadAvisos';
+import type { Aviso, CreateAvisoDTO } from '@/types/avisos';
+import { computeAvisoUnread } from '@/utils/avisosRead';
+import { CalendarApi } from '@/services/calendarApi';
+
+export default function Avisos() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [avisos, setAvisos] = useState<Aviso[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('visualizar');
+
+  // Permissões do usuário
+  const canCreate = canCreateAvisos(user.role);
+
+  // Hook para gerenciar avisos não lidos
+  const { isAvisoRead, markAllAsRead } = useUnreadAvisos();
+  const [escolaContextId, setEscolaContextId] = useState<string | undefined>(undefined);
+
+  // Calcular avisos não lidos
+  const unreadCount = useMemo(() => {
+    return avisos.filter((a) =>
+      computeAvisoUnread(a, user.id, (id) => isAvisoRead(id))
+    ).length;
+  }, [avisos, isAvisoRead, user.id]);
+
+  // Buscar avisos na montagem e quando alternar tabs
+  useEffect(() => {
+    loadAvisos();
+  }, [user.id, user.role]);
+
+  useEffect(() => {
+    const loadEscola = async () => {
+      if (!['diretor', 'coordenador'].includes(user.role)) {
+        setEscolaContextId(undefined);
+        return;
+      }
+      try {
+        const targets = await CalendarApi.getTargets();
+        const escolaIds = [
+          ...new Set(
+            (targets.turmas ?? [])
+              .map((t) => t.escola_id)
+              .filter((id): id is string => Boolean(id))
+          ),
+        ];
+        setEscolaContextId(escolaIds[0]);
+      } catch {
+        setEscolaContextId(undefined);
+      }
+    };
+    if (user.id) loadEscola();
+  }, [user.id, user.role]);
+
+  const loadAvisos = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getFilteredAvisos();
+      setAvisos(data);
+    } catch (error) {
+      console.error('Erro ao carregar avisos:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar os avisos. Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAvisoCreated = () => {
+    loadAvisos();
+    setActiveTab('visualizar');
+    window.dispatchEvent(new CustomEvent(AVISOS_UPDATE_EVENT));
+    toast({
+      title: 'Sucesso',
+      description: 'Aviso publicado com sucesso!',
+    });
+  };
+
+  const handleRefresh = () => {
+    loadAvisos();
+  };
+
+  const handleEditAviso = async (id: string, data: Partial<CreateAvisoDTO>) => {
+    await updateAviso(id, data);
+    await loadAvisos();
+    window.dispatchEvent(new CustomEvent(AVISOS_UPDATE_EVENT));
+  };
+
+  const handleDeleteAviso = async (id: string) => {
+    await deleteAviso(id);
+    await loadAvisos();
+    window.dispatchEvent(new CustomEvent(AVISOS_UPDATE_EVENT));
+  };
+
+  const handleMarkAllAsRead = () => {
+    const avisoIds = avisos.map(a => a.id);
+    markAllAsRead(avisoIds);
+    toast({
+      title: 'Sucesso',
+      description: 'Todos os avisos foram marcados como lidos.',
+    });
+  };
+
+  return (
+    <div className="container mx-auto py-6 px-4 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1.5">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex flex-wrap items-center gap-2 sm:gap-3">
+            <AlertCircle className="w-7 h-7 sm:w-8 sm:h-8 text-blue-600 shrink-0" />
+            Avisos
+          </h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            {canCreate
+              ? 'Visualize e gerencie avisos importantes do sistema'
+              : 'Visualize avisos importantes do sistema'}
+          </p>
+        </div>
+        <div className="flex flex-wrap justify-center gap-3 w-full sm:w-auto sm:justify-end">
+          {unreadCount > 0 && (
+            <Badge variant="destructive" className="text-sm px-3 py-1">
+              {unreadCount} {unreadCount === 1 ? 'novo' : 'novos'}
+            </Badge>
+          )}
+          <Badge variant="secondary" className="text-sm px-3 py-1">
+            {avisos.length} {avisos.length === 1 ? 'aviso' : 'avisos'}
+          </Badge>
+          {unreadCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleMarkAllAsRead}
+            >
+              <CheckCheck className="w-4 h-4 mr-2" />
+              Marcar todos como lidos
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
+        </div>
+      </div>
+
+      {/* Conteúdo Principal */}
+      {canCreate ? (
+        // Usuários que podem criar avisos veem tabs
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsTrigger value="visualizar" className="flex items-center gap-2">
+              <Eye className="w-4 h-4" />
+              Avisos
+            </TabsTrigger>
+            <TabsTrigger value="criar" className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Criar Aviso
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="visualizar" className="mt-6 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Avisos Recentes</CardTitle>
+                <CardDescription>
+                  Lista de todos os avisos relevantes para você
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AvisosList
+                  avisos={avisos}
+                  isLoading={isLoading}
+                  onEditAviso={handleEditAviso}
+                  onDeleteAviso={handleDeleteAviso}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="criar" className="mt-6">
+            <CreateAvisoForm
+              userRole={user.role}
+              userId={user.id}
+              userMunicipioId={user.role === 'tecadm' ? user.city_id : undefined}
+              userEscolaId={escolaContextId}
+              onSuccess={handleAvisoCreated}
+            />
+          </TabsContent>
+        </Tabs>
+      ) : (
+        // Usuários que apenas visualizam não veem tabs
+        <Card>
+          <CardHeader>
+            <CardTitle>Avisos Recentes</CardTitle>
+            <CardDescription>
+              Lista de todos os avisos relevantes para você
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AvisosList
+              avisos={avisos}
+              isLoading={isLoading}
+              onEditAviso={handleEditAviso}
+              onDeleteAviso={handleDeleteAviso}
+            />
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+

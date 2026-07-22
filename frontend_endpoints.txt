@@ -1,0 +1,633 @@
+DELETE /answer-sheets/
+DELETE /calendar/events/
+DELETE /city/
+DELETE /classes/
+DELETE /competitions/
+DELETE /documentos/ata-sala/salvas/
+DELETE /education_stages/
+DELETE /forms/
+DELETE /grades/
+DELETE /ideb-meta/schools/
+DELETE /managers/school-link/
+DELETE /mobile/v1/admin/cities/
+DELETE /mobile/v1/offline-pack/
+DELETE /physical-evaluations/students/bulk
+DELETE /physical-tests/form/
+DELETE /physical-tests/test/
+DELETE /plantao-online/
+DELETE /play-tv/videos/
+DELETE /questions
+DELETE /questions/
+DELETE /school/
+DELETE /skills/
+DELETE /store/admin/items/
+DELETE /subjects/
+DELETE /teacher-class/
+DELETE /test
+DELETE /test/
+DELETE /user-quick-links/
+DELETE /users/
+GET /');
+            return true;
+        } catch (error) 
+GET /admin/questions
+GET /answer-sheets/correction-progress/
+GET /answer-sheets/evolucao/gabaritos?
+GET /answer-sheets/gabarito/
+GET /answer-sheets/gabaritos');
+      setGabaritos(res.data?.gabaritos ?? []);
+    } catch 
+GET /answer-sheets/gabaritos');
+      setGabaritos(res.data?.gabaritos ?? []);
+    } catch (error) 
+GET /answer-sheets/gabaritos');
+      setGabaritos(response.data.gabaritos || []);
+    } catch (error) 
+GET /answer-sheets/jobs/
+GET /answer-sheets/manual-entry?
+GET /answer-sheets/mapa-habilidades/analise-ia?
+GET /answer-sheets/mapa-habilidades/erros?
+GET /answer-sheets/mapa-habilidades?
+GET /answer-sheets/opcoes-filtros');
+          const normalized = normalizeOptions(res.data?.estados);
+          setStateOptions(normalized);
+          return;
+        }
+        if (filters.state && !filters.city) 
+GET /answer-sheets/opcoes-filtros');
+        const data = response.data;
+
+        // Resposta agora vem com: 
+GET /answer-sheets/opcoes-filtros');
+  const estados = normalizeOpcoesFiltros(root.data?.estados);
+  for (const est of estados) 
+GET /answer-sheets/opcoes-filtros?
+GET /answer-sheets/recalculate-jobs/
+GET /answer-sheets/resultados-agregados/analise-ia?
+GET /answer-sheets/resultados-agregados?
+GET /answer-sheets/results?gabarito_id=
+GET /calendar/events/
+GET /calendar/my-events', 
+GET /calendar/targets/me');
+    return data;
+  },
+
+  async uploadEventFileResource(
+    eventId: string,
+    payload: 
+GET /certificates/
+GET /certificates/approved-students/
+GET /certificates/evaluations', 
+GET /certificates/me');
+      return response.data?.data || response.data || [];
+    } catch (error) 
+GET /certificates/quantidade');
+      return response.data?.quantidade ?? 0;
+    } catch (error) 
+GET /certificates/student/
+GET /certificates/template/
+GET /city
+GET /city/
+GET /city/');
+      setMunicipalities(response.data || []);
+    } catch (error) 
+GET /city/domains
+GET /city/municipalities/state/
+GET /city/states
+GET /city/states').then((res) => 
+GET /city/states');
+          const states = statesResponse.data || [];
+          const state = states.find((s: 
+GET /city/states');
+        const raw = Array.isArray(res.data) ? res.data : [];
+        const data: StateOption[] = raw.map((s: Record<string, unknown>) => (
+GET /city/states');
+        const raw = Array.isArray(res.data) ? res.data : [];
+        setStates(
+          raw
+            .map((s: Record<string, unknown>) => (
+GET /city/states');
+        setStates(response.data || []);
+      } catch (error) 
+GET /city/states');
+      const allStates = response.data || [];
+      
+      // Normalizar estrutura dos dados (pode vir como 'nome' ou 'name')
+      const normalizedStates = allStates.map((state: any) => (
+GET /city/states');
+      return response.data || [];
+    } catch (error) 
+GET /classes
+GET /classes').catch(() => (
+GET /classes', 
+GET /classes/
+GET /classes/filtered
+GET /classes/filtered?
+GET /classes/school/
+GET /coins/balance', 
+GET /coins/transactions', 
+GET /competition-templates', 
+GET /competition-templates/
+GET /competitions', 
+GET /competitions/
+GET /competitions/allowed-scopes', cityConfig(options));
+    const res = data as AllowedCompetitionScopesResponse | undefined;
+    return Array.isArray(res?.allowed_scopes) ? res.allowed_scopes : ['individual'];
+  } catch 
+GET /competitions/available').catch(() => (
+GET /competitions/available', cityConfig(options));
+  if (process.env.NODE_ENV !== 'production') 
+GET /competitions/level-options', cityConfig(options));
+  return (data ?? 
+GET /competitions/my', 
+GET /courses').catch(() => (
+GET /courses');
+      return response.data || [];
+    } catch (error) 
+GET /dashboard/admin
+GET /dashboard/analise-sistema
+GET /dashboard/avaliacoes-recentes
+GET /dashboard/avisos/quantidade
+GET /dashboard/comprehensive-stats
+GET /dashboard/comprehensive-stats');
+      return response.data;
+    } catch (error) 
+GET /dashboard/coordenador
+GET /dashboard/diretor
+GET /dashboard/professor
+GET /dashboard/questoes
+GET /dashboard/ranking-alunos
+GET /dashboard/ranking-escolas
+GET /dashboard/ranking-turmas
+GET /dashboard/stats');
+      return response.data;
+    } catch (error) 
+GET /dashboard/tecadm
+GET /documentos/ata-sala/salvas/
+GET /documentos/etiquetas/dados?
+GET /documentos/folha-rascunho/dados?
+GET /documentos/termo-compromisso/dados?
+GET /education_stages
+GET /education_stages'),
+          api.get('/subjects'),
+          api.get('/city/states'),
+        ]);
+        
+        // Usar todos os cursos disponíveis (sem verificação de turmas para evitar muitas requisições)
+        setCourses(coursesRes.data || []);
+        setAllSubjects(subjectsRes.data || []);
+        setStates(statesRes.data || []);
+        
+        // Se estiver editando, carregar dados da olimpíada
+        if (olimpiadaId) 
+GET /education_stages'),
+          api.get('/subjects'),
+          api.get('/city/states'),
+        ]);
+        
+        setCourses(coursesRes.data || []);
+        setAllSubjects(subjectsRes.data || []);
+        setStates(statesRes.data || []);
+        
+        // DEPOIS: Se estiver editando, aplicar dados da avaliação (curso e disciplina aparecem selecionados)
+        if (evaluationId || initialData) 
+GET /education_stages/
+GET /education_stages/all
+GET /evaluation-results/
+GET /evaluation-results/admin/submitted-evaluations
+GET /evaluation-results/alunos?
+GET /evaluation-results/alunos?avaliacao_id=
+GET /evaluation-results/avaliacao?avaliacao_id=
+GET /evaluation-results/avaliacoes', 
+GET /evaluation-results/avaliacoes/
+GET /evaluation-results/avaliacoes/analise-ia?
+GET /evaluation-results/avaliacoes/estatisticas-status');
+      return response.data;
+    } catch (error) 
+GET /evaluation-results/avaliacoes?
+GET /evaluation-results/evolucao/avaliacoes?
+GET /evaluation-results/grades');
+            
+            if (response.data) 
+GET /evaluation-results/list?
+GET /evaluation-results/mapa-habilidades/analise-ia?
+GET /evaluation-results/mapa-habilidades/erros?
+GET /evaluation-results/mapa-habilidades?
+GET /evaluation-results/opcoes-filtros/
+GET /evaluation-results/opcoes-filtros?
+GET /evaluation-results/relatorio-detalhado-filtrado/
+GET /evaluation-results/relatorio-detalhado/
+GET /evaluation-results/student/
+GET /evaluations/stats
+GET /forms', 
+GET /forms/
+GET /forms/aggregated/results/pneerq', 
+GET /forms/classes/grade/
+GET /forms/grades/
+GET /forms/grades/school/
+GET /forms/me');
+      setQuestionarios(response.data.data || []);
+    } catch (error: any) 
+GET /forms/schools/city/
+GET /games');
+            const allGames = response.data.jogos || [];
+
+            // Para alunos, contar todos os jogos disponíveis
+            // Para admin/professor, contar apenas os próprios jogos
+            const gamesToCount = user.role === 'aluno' ? allGames : allGames.filter(game => game.userId === user.id);
+            setGamesCount(gamesToCount.length);
+        } catch (error) 
+GET /grades
+GET /grades');
+      return response.data || [];
+    } catch (error) 
+GET /grades/
+GET /grades/').catch(() => (
+GET /grades/');
+        if (Array.isArray(response.data)) 
+GET /grades/');
+        setGradesForSkills(Array.isArray(response.data) ? response.data : []);
+      } catch 
+GET /grades/by-education-stage/
+GET /grades/education-stage/
+GET /ideb-meta', 
+GET /managers
+GET /managers/city/
+GET /managers/me
+GET /managers/school/
+GET /mobile/v1/admin/cities');
+  return data;
+}
+
+/**
+ * Lista municípios da VPS central disponíveis para adicionar ao mobile
+ */
+export async function listAvailableCities(): Promise<AvailableCitiesResponse> 
+GET /mobile/v1/admin/cities/available-for-mobile'
+  );
+  return data;
+}
+
+/**
+ * Adiciona um município ao catálogo mobile
+ */
+export async function addMobileCity(request: AddCityRequest): Promise<MobileCityDirectory> 
+GET /mobile/v1/offline-pack', 
+GET /mobile/v1/offline-pack/
+GET /monitoramento/alunos/
+GET /monitoramento/alunos?
+GET /monitoramento/escolas?
+GET /monitoramento/habilidade-detalhe?
+GET /monitoramento/opcoes-filtros?
+GET /monitoramento/relatorio-dados?
+GET /monitoramento/turmas?
+GET /persist-user/');
+            if (response.data) 
+GET /physical-evaluations/
+GET /physical-tests/correction-progress/
+GET /physical-tests/task/
+GET /physical-tests/test/
+GET /plantao-online/student?
+GET /plantao-online?
+GET /play-tv/videos/
+GET /play-tv/videos?
+GET /professores/tecadm');
+      setTecAdminUsers(response.data || []);
+    } catch (error) 
+GET /questions/
+GET /questions/?subject_id=
+GET /questions/recent', 
+GET /questions?test_id=
+GET /ranking/report
+GET /reports/users/counts
+GET /school
+GET /school');
+      setSchools(response.data || []);
+    } catch (error) 
+GET /school-teacher
+GET /school-teacher');
+          const allLinks: Array<
+GET /school-teacher', 
+GET /school/
+GET /school/').catch(() => (
+GET /school/');
+      const schoolsData = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+      setSchools(schoolsData);
+    } catch (error) 
+GET /school/by-grade/
+GET /school/city/
+GET /schools').catch(() => (
+GET /schools/recent
+GET /skills/grade/
+GET /skills/subject/
+GET /store/admin/allowed-scopes', cityConfig(cityId));
+  },
+
+  createItem(payload: StoreItemCreatePayload, cityId?: string | null) 
+GET /store/admin/items', 
+GET /store/items', 
+GET /store/my-purchases', 
+GET /student-answers/active-session/
+GET /student-answers/session/
+GET /student-answers/sessions/
+GET /student-answers/student/
+GET /student-answers/student/sessions');
+      const sessions = response.data?.sessions || [];
+      
+      // Filtrar apenas sessões em andamento
+      // A rota retorna status: 'em_andamento', 'finalizada', 'expirada', etc.
+      const active = sessions.filter((s: any) => s.status === 'em_andamento');
+      
+      setActiveSessions(active);
+    } catch 
+GET /students
+GET /students');
+      const raw = Array.isArray(response.data) ? response.data : [];
+      const list: Array<
+GET /students', 
+GET /students/
+GET /students/classes/
+GET /students/me
+GET /students/me');
+          setProfileData(response.data);
+        } else if (user?.role === 'professor') 
+GET /students/me');
+      const studentData = response.data;
+
+      // O endpoint retorna os dados formatados com grade_id e school_id
+      if (studentData.grade_id) 
+GET /students/me/conquistas
+GET /students/recent
+GET /students/school/
+GET /subdomain/check?subdomain=
+GET /subjects
+GET /subjects').catch(() => (
+GET /subjects').then((res) => 
+GET /subjects');
+        setDisciplines(Array.isArray(response.data) ? response.data : []);
+      } catch 
+GET /subjects');
+        setSubjectsForSkills(Array.isArray(response.data) ? response.data : []);
+      } catch 
+GET /subjects');
+      const allSubjects = response.data || [];
+      
+      // Para professor, filtrar apenas disciplinas das suas turmas (se disponível)
+      if (userRole === 'professor' && userTurmas && userTurmas.length > 0) 
+GET /subjects');
+      const subjects = subjectsResponse.data;
+
+      // Encontrar a disciplina pelo nome
+      interface SubjectItem 
+GET /subjects');
+      return response.data;
+    }, 2, 2000, 90000);
+  }
+
+  // ✅ ATUALIZADO: Buscar skills por disciplina usando ID
+  static async getSkillsBySubject(subjectName: string): Promise<Array<
+GET /subjects');
+      setDisciplines(response.data || []);
+    } catch (error) 
+GET /subjects');
+      setSubjects(response.data || []);
+    } catch 
+GET /subjects/by-school/
+GET /teacher
+GET /teacher');
+            const list = Array.isArray(listResponse.data) ? listResponse.data : (listResponse.data?.data ?? listResponse.data?.professores ?? []);
+            const teacher = (list as Array<
+GET /teacher');
+        const teachers: Array<
+GET /teacher/
+GET /teacher/school/
+GET /test
+GET /test-sessions/results', 
+GET /test-sessions/students', 
+GET /test-sessions/submitted?
+GET /test/
+GET /test/', 
+GET /test/my-class/tests
+GET /test/my-class/tests');
+      
+      // O endpoint retorna 
+GET /test/my-class/tests');
+        const testsData = response.data?.tests ?? [];
+
+        if (!Array.isArray(testsData)) 
+GET /test/student/completed
+GET /test/student/result/
+GET /test?
+GET /test?school_id=
+GET /user-quick-links/
+GET /users/
+GET /users/');
+                            users = Array.isArray(response?.data) ? response.data : [];
+                        } catch 
+GET /users/list
+GET /users/list');
+      const usersData = response.data?.users || [];
+
+      const formattedUsers = usersData.map((user: User) => (
+GET /users/list', 
+GET /users/me/onboarding-status
+GET /users/school/
+GET /users/user-settings/
+PATCH /answer-sheets/gabarito/
+PATCH /answer-sheets/gabaritos/
+PATCH /competition-templates/
+PATCH /evaluation-results/admin/evaluations/
+PATCH /evaluation-results/avaliacoes/
+PATCH /mobile/v1/offline-pack/
+PATCH /monitoramento/alunos/
+PATCH /notifications/
+PATCH /physical-evaluations/students/
+PATCH /physical-evaluations/students/bulk
+PATCH /student-answers/sessions/
+POST /admin/criar-usuario
+POST /admin/criar-usuario', 
+POST /answer-sheets/compare',
+      
+POST /answer-sheets/correct-new', 
+POST /answer-sheets/create-gabaritos', payload, 
+POST /answer-sheets/evolution/export-excel', payload, requestConfig);
+    return 
+POST /answer-sheets/generate', payload, 
+POST /answer-sheets/manual-correction',
+    manualScopeBody(scope, studentId, answers)
+  );
+  return res.data;
+}
+
+export 
+POST /answer-sheets/process-correction', 
+POST /answer-sheets/student/
+POST /answer-sheets/student/compare',
+      
+POST /calendar/events', body);
+    return mapDtoToFullCalendar(data.event);
+  },
+
+  async updateEvent(eventId: string, body: UpdateEventBody): Promise<EventInput> 
+POST /calendar/events', body);
+  if (!data?.event) 
+POST /calendar/events/
+POST /certificates/approve', requestBody);
+      return response.data;
+    } catch (error: any) 
+POST /certificates/template', template);
+      return response.data;
+    } catch (error: any) 
+POST /city/
+POST /classes
+POST /classes/
+POST /coins/admin/credit', 
+POST /coins/admin/debit', 
+POST /competition-templates', payload);
+  return data;
+}
+
+/** Atualizar template de competição. PATCH /competition-templates/:id */
+export async function updateCompetitionTemplate(
+  id: string,
+  payload: UpdateCompetitionTemplatePayload,
+): Promise<CompetitionTemplate> 
+POST /competition-templates/
+POST /competitions', payload, cityConfig(options));
+  return data as Competition;
+}
+
+export async function updateCompetition(
+  id: string,
+  payload: UpdateCompetitionFormData,
+  options?: CompetitionRequestOptions
+): Promise<Competition> 
+POST /competitions/
+POST /documentos/ata-sala/salvas
+POST /education_stages
+POST /evaluation-results/
+POST /evaluation-results/avaliacoes/
+POST /evaluation-results/avaliacoes/calcular', 
+POST /evaluation-results/avaliacoes/verificar-todas', body);
+      
+      
+      return response.data;
+    } catch (error) 
+POST /forms', formPayload);
+      const formId = createResponse.data.id;
+
+      // 2. Enviar o questionário para os destinatários
+      toast(
+POST /forms', payload, postConfig);
+      const data = response.data;
+
+      let successMessage: string;
+      if (data?.forms && Array.isArray(data.forms)) 
+POST /forms/
+POST /grades/', formData);
+        toast(
+POST /ideb-meta/schools', 
+POST /login/
+POST /logout/
+POST /managers
+POST /managers', requestBody);
+
+        if (response.status === 200 || response.status === 201) 
+POST /managers/link-to-school
+POST /mobile/v1/admin/cities', request);
+  return data;
+}
+
+/**
+ * Atualiza um município do catálogo mobile
+ */
+export async function updateMobileCity(
+  cityId: string,
+  request: UpdateCityRequest
+): Promise<MobileCityDirectory> 
+POST /mobile/v1/offline-pack/bulk-delete',
+    
+POST /mobile/v1/offline-pack/register',
+    body,
+    offlinePackConfig(cityIdForAdmin)
+  );
+  return data;
+}
+
+export async function getOfflinePackQrCode(
+  offlinePackId: string,
+  cityIdForAdmin?: string
+): Promise<OfflinePackQrCodeResponse> 
+POST /notifications', 
+POST /physical-tests/form/
+POST /physical-tests/test/
+POST /plantao-online', plantaoData);
+
+      toast(
+POST /play-tv/videos', videoData);
+      const videoId = extractCreatedPlayTvVideoId(createRes.data);
+
+      const filesToUpload = fileRows.filter((r): r is LocalFileRow & 
+POST /questions
+POST /school
+POST /school-teacher
+POST /school/
+POST /skills
+POST /store/admin/items', payload, cityConfig(cityId));
+  },
+
+  updateItem(itemId: string, payload: Partial<StoreItemCreatePayload>, cityId?: string | null) 
+POST /store/purchase', 
+POST /student-answers/save-partial', 
+POST /student-answers/sessions/
+POST /student-answers/submit', payload, 
+POST /student/
+POST /students
+POST /students/
+POST /students/csv
+POST /students/me/conquistas/resgatar
+POST /subjects
+POST /teacher
+POST /teacher-class
+POST /teacher/
+POST /test
+POST /test', payload);
+      
+      // Se o backend retornou com sucesso, marcar como olimpíada no frontend
+      const result = response.data;
+      if (result) 
+POST /test-session/
+POST /test/
+POST /test/compare', 
+POST /test/evolution/export-excel', payload, 
+POST /test/evolution/export-excel', payload, exportConfig);
+
+                    // Criar blob a partir da resposta
+                    const blob = new Blob([response.data], 
+POST /test/student/compare
+POST /user-quick-links/
+POST /users
+POST /users/bulk-upload-students', formData, 
+POST /users/change-password
+POST /users/check-email
+POST /users/forgot-password
+POST /users/me/onboarding
+POST /users/reset-password
+POST /users/user-settings/
+POST /users/validate-reset-token
+PUT /calendar/events/
+PUT /city/
+PUT /classes/
+PUT /competitions/
+PUT /documentos/ata-sala/salvas/
+PUT /grades/
+PUT /ideb-meta', 
+PUT /mobile/v1/admin/cities/
+PUT /play-tv/videos/
+PUT /questions/
+PUT /school/
+PUT /store/admin/items/
+PUT /students/
+PUT /subjects/
+PUT /test/
+PUT /users/

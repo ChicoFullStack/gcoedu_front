@@ -1,0 +1,12 @@
+interface:
+  display_name: "Desenvolvedor Frontend S\xEAnior"
+  short_description: Frontends seguros, limpos e de alta qualidade
+  default_prompt: Use $develop-frontend-apps para arquitetar ou evoluir este frontend
+    com React, Vite ou Next.js.
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true
