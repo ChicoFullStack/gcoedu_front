@@ -24,13 +24,13 @@ COPY package*.json ./
 
 
 # Usa npm ci (mais rápido e estável em ambientes CI/CD)
-RUN npm install
-#RUN --mount=type=cache,target=/root/.npm npm ci --prefer-offline --no-audit
-
+# Instala apenas dependências de produção/dev otimizadas para memória
+RUN npm install --no-audit --no-fund
 
 COPY . .
 
-# Build do frontend
+# Build do frontend com limite de memória alocada para o Node (ex: 1GB ou 1.5GB)
+ENV NODE_OPTIONS="--max-old-space-size=1536"
 RUN npm run build
 
 # ----------------------------
