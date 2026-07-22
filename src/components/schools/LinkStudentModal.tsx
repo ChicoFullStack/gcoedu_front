@@ -74,10 +74,18 @@ export function LinkStudentModal({
     const fetchStudents = async () => {
       try {
         setIsLoading(true);
-        const endpoint = ['admin', 'tecadm'].includes(user?.role || '') ? '/students' : '/students/available';
-        const response = await api.get(endpoint);
+        const response = await api.get('/students');
         const allStudents = Array.isArray(response.data) ? response.data : response.data?.alunos ?? response.data?.students ?? [];
-        setStudents(Array.isArray(allStudents) ? allStudents : []);
+        
+        // Ensure it's an array before filtering
+        const studentsList = Array.isArray(allStudents) ? allStudents : [];
+        
+        // Filter out students that are already assigned to a class
+        const availableStudents = studentsList.filter((student: any) => {
+          return !student.class_id && !student.classId;
+        });
+        
+        setStudents(availableStudents);
       } catch (error: unknown) {
         const status = (error as { response?: { status?: number } })?.response?.status;
         // 404 ou lista vazia: não exibir erro
