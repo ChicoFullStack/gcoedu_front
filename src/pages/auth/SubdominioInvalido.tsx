@@ -71,9 +71,7 @@ export default function SubdominioInvalido() {
       
       if (data?.exists) {
         localStorage.setItem("tenant_slug", cleanTenant);
-        navigate("/", { replace: true });
-        // Recarregar a página para garantir que o contexto pegue o novo tenant do localStorage
-        window.location.reload();
+        window.location.href = "/";
       } else {
         toast({
           title: "Instituição não encontrada",
