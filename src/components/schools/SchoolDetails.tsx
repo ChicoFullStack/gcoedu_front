@@ -369,6 +369,17 @@ export default function SchoolDetails() {
               user_id: item.usuario?.id,
               vinculo_id: item.teacher_class?.id || item.vinculo_turma?.teacher_class_id
             }));
+          } else if (Array.isArray(teachersResponse.data)) {
+            classTeachers = teachersResponse.data.map((item: any) => ({
+              id: item.id,
+              name: item.name,
+              email: item.email,
+              registration: item.registration,
+              role: item.role || 'professor',
+              class_id: classItem.id,
+              user_id: item.user_id,
+              vinculo_id: item.vinculo_id || item.id
+            }));
           }
           
           // Buscar alunos da turma
