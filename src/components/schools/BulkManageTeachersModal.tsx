@@ -286,15 +286,27 @@ export function BulkManageTeachersModal({
       setStep("classes");
       setClassStepTeachers([]);
       const response = await api.get(`/teacher/school/${schoolId}`);
-      const list = Array.isArray(response.data?.professores) ? response.data.professores : [];
+      let list = [];
+      if (response.data && Array.isArray(response.data.professores)) {
+        list = response.data.professores;
+      } else if (Array.isArray(response.data)) {
+        list = response.data;
+      }
 
       const dedup = new Map<string, ClassManageTeacher>();
       list.forEach((item: Record<string, unknown>) => {
-        const professor = (item.professor ?? {}) as Record<string, unknown>;
-        const usuario = (item.usuario ?? {}) as Record<string, unknown>;
-        const id = String(professor.id ?? usuario.id ?? "").trim();
-        const nome = String(professor.name ?? usuario.name ?? "").trim();
-        const email = String(professor.email ?? usuario.email ?? "").trim();
+        let id, nome, email;
+        if (item.professor || item.usuario) {
+          const professor = (item.professor ?? {}) as Record<string, unknown>;
+          const usuario = (item.usuario ?? {}) as Record<string, unknown>;
+          id = String(professor.id ?? usuario.id ?? "").trim();
+          nome = String(professor.name ?? usuario.name ?? "").trim();
+          email = String(professor.email ?? usuario.email ?? "").trim();
+        } else {
+          id = String(item.id ?? "").trim();
+          nome = String(item.name ?? item.nome ?? "").trim();
+          email = String(item.email ?? "").trim();
+        }
         if (!id || !nome) return;
         if (!dedup.has(id)) {
           dedup.set(id, { id, nome, email });
