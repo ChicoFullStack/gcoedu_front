@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import CategoryPickerModal from "@/components/evaluations/questions/CategoryPickerModal";
 import AddSkillModal from "@/components/evaluations/questions/AddSkillModal";
 import AddSkillsBatchModal from "@/components/evaluations/questions/AddSkillsBatchModal";
+import ImportBnccModal from "@/components/evaluations/questions/ImportBnccModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -84,6 +85,7 @@ const HabilidadesPage = () => {
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
   const [addSkillOpen, setAddSkillOpen] = useState(false);
   const [addBatchOpen, setAddBatchOpen] = useState(false);
+  const [importBnccOpen, setImportBnccOpen] = useState(false);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [pendingDeleteIds, setPendingDeleteIds] = useState<string[] | null>(null);
   const [skillSortBy, setSkillSortBy] = useState<"code-asc" | "code-desc" | "desc-asc" | "desc-desc">("code-asc");
@@ -264,7 +266,7 @@ const HabilidadesPage = () => {
         </div>
         {canManageSkills && (
           <div className="flex flex-wrap justify-center gap-2 w-full sm:w-auto sm:justify-end">
-            <Button variant="outline" onClick={() => toast({ title: "Em desenvolvimento", description: "A importação da BNCC estará disponível em breve." })}>
+            <Button variant="outline" onClick={() => setImportBnccOpen(true)}>
               <BookOpen className="h-4 w-4 mr-2" />
               Importar da BNCC
             </Button>
@@ -425,6 +427,18 @@ const HabilidadesPage = () => {
           <AddSkillsBatchModal
             open={addBatchOpen}
             onOpenChange={setAddBatchOpen}
+            onSuccess={handleSkillAdded}
+            subjects={subjects}
+            grades={grades}
+            defaultSubjectId={subjectId !== "all" ? subjectId : undefined}
+            defaultGradeId={gradeId !== "all" ? gradeId : undefined}
+          />
+        )}
+
+        {canManageSkills && (
+          <ImportBnccModal
+            open={importBnccOpen}
+            onOpenChange={setImportBnccOpen}
             onSuccess={handleSkillAdded}
             subjects={subjects}
             grades={grades}
