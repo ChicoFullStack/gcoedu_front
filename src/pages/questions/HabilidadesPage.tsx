@@ -264,6 +264,10 @@ const HabilidadesPage = () => {
         </div>
         {canManageSkills && (
           <div className="flex flex-wrap justify-center gap-2 w-full sm:w-auto sm:justify-end">
+            <Button variant="outline" onClick={() => toast({ title: "Em desenvolvimento", description: "A importação da BNCC estará disponível em breve." })}>
+              <BookOpen className="h-4 w-4 mr-2" />
+              Importar da BNCC
+            </Button>
             <Button onClick={() => setAddSkillOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Adicionar habilidade
