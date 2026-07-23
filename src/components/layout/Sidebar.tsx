@@ -237,21 +237,9 @@ export default function Sidebar({ onMobileMenuClose, isMobileOpen = false }: Sid
       role: ["admin", "professor", "diretor", "coordenador", "aluno", "tecadm"],
       links: [
         {
-          icon: Gamepad,
-          label: "Jogos",
-          href: `${user.role === 'aluno' ? "/aluno/jogos" : "/app/jogos"}`,
-          role: ["admin", "professor", "diretor", "coordenador", "aluno", "tecadm"]
-        },
-        {
           icon: Tv,
           label: "Play TV",
           href: `${user.role === 'aluno' ? "/aluno/play-tv" : "/app/play-tv"}`,
-          role: ["admin", "professor", "diretor", "coordenador", "aluno", "tecadm"]
-        },
-        {
-          icon: Headset,
-          label: "Plantão Online",
-          href: `${user.role === 'aluno' ? "/aluno/plantao-online" : "/app/plantao"}`,
           role: ["admin", "professor", "diretor", "coordenador", "aluno", "tecadm"]
         },
       ]
@@ -326,18 +314,8 @@ export default function Sidebar({ onMobileMenuClose, isMobileOpen = false }: Sid
             { icon: FileText, label: "Etiquetas", href: "/app/documentos/etiquetas", role: ["admin", "professor", "diretor", "coordenador", "tecadm"] },
           ]
         },
-        {
-          icon: Target,
-          label: "Projeção de Metas",
-          role: ["admin", "professor", "diretor", "coordenador", "tecadm"],
-          children: [
-            { icon: Calculator, label: "Calculadora SAEB", href: "/app/calculadora-saeb", role: ["admin", "professor", "diretor", "coordenador", "tecadm"] },
-            { icon: Target, label: "Cálculo de Metas", href: "/app/calculo-metas", role: ["admin", "professor", "diretor", "coordenador", "tecadm"] },
-          ]
-        },
         { icon: TrendingUp, label: "Evolução", href: "/app/evolucao", role: ["admin", "professor", "diretor", "coordenador", "tecadm"] },
         { icon: BarChart3, label: "Resultados", href: "/app/resultados", role: ["admin", "professor", "diretor", "coordenador", "tecadm"] },
-        { icon: Activity, label: "Monitoramento", href: "/app/monitoramento", role: ["admin", "professor", "diretor", "coordenador", "tecadm"] },
         {
           icon: NotebookPen,
           label: "Questionários",
@@ -357,11 +335,8 @@ export default function Sidebar({ onMobileMenuClose, isMobileOpen = false }: Sid
           children: [
             { icon: Target, label: "Acerto e Níveis", href: "/app/relatorios/acerto-niveis", role: ["admin", "professor", "diretor", "coordenador", "tecadm"] },
             { icon: Thermometer, label: "Mapa de habilidades", href: "/app/relatorios/mapa-habilidades", role: ["admin", "professor", "diretor", "coordenador", "tecadm"] },
-            { icon: PieChart, label: "Análise das Avaliações", href: "/app/relatorios/analise-avaliacoes", role: ["admin", "professor", "diretor", "coordenador", "tecadm"] },
-            { icon: School, label: "Relatório Escolar", href: "/app/relatorios/relatorio-escolar", role: ["admin", "professor", "diretor", "coordenador", "tecadm"] },
             { icon: Presentation, label: "Relatório Apresentação", href: "/app/relatorios/relatorio-apresentacao-19-slides", role: ["admin", "professor", "diretor", "coordenador", "tecadm"] },
             { icon: Medal, label: "Relatório de ranking", href: "/app/relatorios/ranking", role: ["admin", "professor", "diretor", "coordenador", "tecadm"] },
-            { icon: Layers, label: "Relatório Geral", href: "/app/relatorios/relatorio-geral", role: ["admin", "professor", "diretor", "coordenador", "tecadm"] },
           ]
         },
       ]
@@ -371,7 +346,6 @@ export default function Sidebar({ onMobileMenuClose, isMobileOpen = false }: Sid
       role: ["admin", "professor", "diretor", "coordenador", "aluno", "tecadm"],
       links: [
         { icon: Award, label: "Certificados", href: `${user.role === 'aluno' ? "/aluno/certificados" : "/app/certificados"}`, role: ["admin", "professor", "diretor", "coordenador", "aluno", "tecadm"] },
-        { icon: Sparkles, label: "Olimpíadas", href: `${user.role === 'aluno' ? "/aluno/olimpiadas" : "/app/olimpiadas"}`, role: ["admin", "professor", "diretor", "coordenador", "aluno", "tecadm"] },
       ]
     },
     {
